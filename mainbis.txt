@@ -1,0 +1,59 @@
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "3.0.2"
+    }
+  }
+}
+
+provider "docker" {}
+
+# Pull de l'image Docker
+resource "docker_image" "ubuntu_ssh" {
+  name = "fredericeducentre/ubuntu-ssh"
+}
+
+# Création de conteneur Docker pour Jenkins à partir de l'image Ubuntu SSH
+resource "docker_container" "jenkinsserver" {
+  name  = "jenkinsserver"
+  image = docker_image.ubuntu_ssh.image_id
+
+  # Expose le port SSH du conteneur et le port pour Jenkins
+  ports {
+    internal = 22
+    external = 2222  # Port externe pour la connexion SSH
+  }
+  ports {
+    internal = 8080
+    external = 8082  # Port externe pour Jenkins UI
+  }
+  memory = 1024
+}
+
+# Création de conteneur Docker pour SonarQube à partir de l'image Ubuntu SSH
+resource "docker_container" "sonarqubeserver" {
+  name  = "sonarqubeserver"
+  image = docker_image.ubuntu_ssh.image_id
+
+  # Expose le port SSH du conteneur et le port pour SonarQube
+  ports {
+    internal = 22
+    external = 2223  # Port externe pour la connexion SSH
+  }
+  ports {
+    internal = 9000
+    external = 9000  # Port externe pour SonarQube UI
+  }
+  memory = 2048
+}  
+
+
+Vérification
+Après avoir consolidé les fichiers, exécutez les commandes suivantes pour valider et initialiser la configuration :
+
+sh
+$ terraform validate
+$ terraform init
+$ terraform plan
+
