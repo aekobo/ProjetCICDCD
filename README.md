@@ -202,3 +202,108 @@ output "app_url" {
 }
 
 
+===
+Pipelin ProjetCICDCD
+
+pipeline {
+    agent any
+
+    environment {
+        TERRAFORM_VERSION = '1.1.7' // Ajustez selon la version souhaitée
+        TERRAFORM_PATH = "/usr/local/bin/terraform"
+        GIT_REPO = 'https://github.com/aekobo/ProjetCICDCD.git'
+    }
+
+    stages {
+        stage('Cloner le dépôt') {
+            steps {
+                git url: "${env.GIT_REPO}", branch: 'main'
+            }
+        }
+
+        stage('Installer Terraform') {
+            steps {
+                script {
+                    // Utiliser une image Docker préconfigurée pour exécuter les commandes
+                    docker.image('hashicorp/terraform:latest').inside {
+                        sh 'terraform version'
+                    }
+                }
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                script {
+                    docker.image('hashicorp/terraform:latest').inside {
+                        sh 'terraform init'
+                    }
+                }
+            }
+        }
+
+        stage('Terraform Validate') {
+            steps {
+                script {
+                    docker.image('hashicorp/terraform:latest').inside {
+                        sh 'terraform validate'
+                    }
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                script {
+                    docker.image('hashicorp/terraform:latest').inside {
+                        sh 'terraform plan'
+                    }
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                script {
+                    docker.image('hashicorp/terraform:latest').inside {
+                        sh 'terraform apply -auto-approve'
+                    }
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                script {
+                    // Exécuter des tests d'intégration pour vérifier que les conteneurs sont en cours d'exécution
+                    sh """
+                    docker ps | grep jenkinsserver
+                    docker ps | grep sonarqubeserver
+                    docker ps | grep mysql
+                    docker ps | grep app
+                    """
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                script {
+                    docker.image('hashicorp/terraform:latest').inside {
+                        sh 'terraform destroy -auto-approve'
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline terminé avec succès!'
+        }
+        failure {
+            echo 'Pipeline échoué!'
+        }
+    }
+}
+
